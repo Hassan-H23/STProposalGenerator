@@ -1,8 +1,5 @@
 streamlit
 python-docx
 pandas
-datetime
-BytesIO
 Document
-parse_xml
 
