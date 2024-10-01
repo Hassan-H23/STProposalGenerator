@@ -215,4 +215,4 @@ if st.session_state.services_list:
             st.session_state.services_list = [
                 service for service in st.session_state.services_list if service.serviceName != remove_service]
             st.success(f"{remove_service} has been removed.")
-            st.st.rerun()
+            st.rerun()
