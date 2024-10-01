@@ -186,33 +186,38 @@ if st.session_state.services_list:
                                                   ["Concierge", "Security", "Janitorial", "Cleaning", "Porter",
                                                    "Valet"],
                                                   index=["Concierge", "Security", "Janitorial", "Cleaning", "Porter",
-                                                          "Valet"].index(selected_service.serviceName))
-            updated_weekly_hours = st.number_input("Weekly Hours", value=selected_service.weeklyHours, min_value=0,
-                                                    max_value=1000, step=1)
-            updated_bill_rate = st.number_input("Bill Rate", value=selected_service.billRate, min_value=0.0,
-                                                 max_value=1000.0, step=1.0)
-            updated_yearly_holiday_hours = st.number_input("Yearly Holiday Hours",
-                                                            value=selected_service.yearlyHolidayHours, min_value=0,
-                                                            max_value=1000, step=1)
-            updated_inflation_rate = st.number_input("Inflation Rate", value=selected_service.inflationRate,
-                                                      min_value=0.0, max_value=100.0, step=0.1)
-            submit_update = st.form_submit_button("Update Service")
+                                                         "Valet"].index(selected_service.serviceName))
+            updated_weekly_hours = st.number_input("Weekly Hours", min_value=0, max_value=1000, step=1,
+                                                   value=selected_service.weeklyHours)
+            updated_bill_rate = st.number_input("Bill Rate", min_value=0.0, max_value=1000.0, step=1.0,
+                                                value=selected_service.billRate)
+            updated_yearly_holiday_hours = st.number_input("Yearly Holiday Hours", min_value=0, max_value=1000, step=1,
+                                                           value=selected_service.yearlyHolidayHours)
+            col1, col2, col3 = st.columns(3, vertical_alignment="bottom")
+            with col1:
+                update_button = st.form_submit_button("Update Service")
+            with col2:
+                remove_button = st.form_submit_button("Remove Service")
+            with col3:
+                clear_button = st.form_submit_button("Clear Services")
 
-            if submit_update:
-                selected_service.serviceName = updated_service_choice
-                selected_service.weeklyHours = updated_weekly_hours
-                selected_service.billRate = updated_bill_rate
-                selected_service.yearlyHolidayHours = updated_yearly_holiday_hours
-                selected_service.inflationRate = updated_inflation_rate
-                st.session_state.services_list[st.session_state.services_list.index(selected_service)] = selected_service
-                st.success("Service updated successfully!")
-                st.rerun()
-
-    remove_service = st.selectbox("Select Service to Remove", options=["None"] + [service.serviceName for service in
-                                                                                  st.session_state.services_list])
-    if remove_service != "None":
-        if st.button("Remove Service"):
-            st.session_state.services_list = [
-                service for service in st.session_state.services_list if service.serviceName != remove_service]
-            st.success(f"{remove_service} has been removed.")
+        if update_button:
+            # Update the service with the new values
+            selected_service.serviceName = updated_service_choice
+            selected_service.weeklyHours = updated_weekly_hours
+            selected_service.billRate = updated_bill_rate
+            selected_service.yearlyHolidayHours = updated_yearly_holiday_hours
+            st.success("Service updated successfully!")
             st.rerun()
+
+        if remove_button:
+            # Remove the service from the list
+            st.session_state.services_list.remove(selected_service)
+            st.success("Service removed successfully!")
+            st.rerun()
+
+        if clear_button:
+            st.session_state.services_list.clear()
+            st.rerun()
+else:
+    st.write("No services added")
