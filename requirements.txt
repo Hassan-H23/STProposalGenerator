@@ -5,8 +5,4 @@ datetime
 BytesIO
 Document
 parse_xml
-nsdecls
-Inches
-Pt
-pd
-st
+
