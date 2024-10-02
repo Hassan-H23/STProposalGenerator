@@ -85,6 +85,8 @@ with st.sidebar:
                     paragraph.text = paragraph.text.replace('DDDD', formatted_date)
                 if 'CCAA' in paragraph.text:
                     paragraph.text = paragraph.text.replace('CCAA', companyAddress)
+                if 'IIII' in paragraph.text:
+                    paragraph.text = paragraph.text.replace('IIII', inflationRate)
 
             for table in document.tables:
                 for row in table.rows:
