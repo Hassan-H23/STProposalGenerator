@@ -22,7 +22,6 @@ def set_cell_margins(cell, top, right, bottom, left):
         )
     )
 
-
 def get_ordinal_suffix(day):
     if 10 <= day % 100 <= 20:
         return "th"
@@ -86,7 +85,7 @@ with st.sidebar:
                 if 'CCAA' in paragraph.text:
                     paragraph.text = paragraph.text.replace('CCAA', companyAddress)
                 if 'IIII' in paragraph.text:
-                    paragraph.text = paragraph.text.replace('IIII', inflationRate)
+                    paragraph.text = paragraph.text.replace('IIII', str(inflationRate))
 
             for table in document.tables:
                 for row in table.rows:
