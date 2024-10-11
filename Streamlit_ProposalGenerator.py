@@ -108,13 +108,31 @@ def read_file(file_name):
         print(f"Error: The file '{file_name}' was not found.")
     except Exception as e:
         print(f"An error occurred: {e}")
-    print(lines)
+
     return lines
+
+
+def populate_set(Set):
+    for service in st.session_state.services_list:
+        Set.add(service.serviceName)
+
+    # Convert the set to a list to maintain the order
+    service_list = list(Set)
+
+    # Check if there are more than one service to concatenate "and"
+    if len(service_list) > 1:
+        # Modify the last element to include "and"
+        service_list[-1] = f"and {service_list[-1]}"
+
+    # Join the elements with commas except the last one which has "and"
+    return ", ".join(service_list)
 
 
 # Call the function to initialize the session state
 initialize_session_state()
 
+if 'Service_Names_Set' not in st.session_state:
+    st.session_state.Service_Names_Set = set()
 
 st.image("icons/Maverick_Proposal.png", width=450)
 # File uploader for the proposal template
@@ -155,15 +173,16 @@ with st.sidebar:
         else:
 
             document = Document(doc_file)
-
+            ScopeOfWork = populate_set(st.session_state.Service_Names_Set)
             current_date = datetime.now()
             formatted_date = current_date.strftime(
                 "%B") + f" {current_date.day}{get_ordinal_suffix(current_date.day)}, {current_date.year}"
 
-            docxedit.replace_string(document, "CCNN", companyName)
-            docxedit.replace_string(document, "%CCAA%", str(companyAddress))
-            docxedit.replace_string(document, "NNNN", ceoName)
-            docxedit.replace_string(document, "DDDD", formatted_date)
+            docxedit.replace_string(document, 'CCNN', companyName)
+            docxedit.replace_string(document, 'CCAA', str(companyAddress))
+            docxedit.replace_string(document, 'NNNN', ceoName)
+            docxedit.replace_string(document, 'DDDD', formatted_date)
+            docxedit.replace_string(document, 'SSSS', ScopeOfWork)
 
             # Scope of Work (Jan and Conc Only)
             for service in st.session_state.services_list:
