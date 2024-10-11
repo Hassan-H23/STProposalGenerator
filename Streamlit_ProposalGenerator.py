@@ -1,13 +1,80 @@
 from datetime import datetime
 from io import BytesIO
-from docx import Document
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
-from docx.shared import Inches, RGBColor
 from docx.shared import Pt
+import docxedit
 import pandas as pd
 import streamlit as st
+from streamlit import divider, title
 import Service
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx import Document
+from docx.shared import Inches
+
+
+
+def initialize_session_state():
+    if 'services_list' not in st.session_state:
+        st.session_state.services_list = []
+def add_bullet(paragraph):
+
+    p = paragraph._element
+    pPr = p.get_or_add_pPr()
+
+    # Create bullet properties
+    numPr = OxmlElement('w:numPr')  # Create numbering element
+    ilvl = OxmlElement('w:ilvl')  # Indentation level
+    ilvl.set(qn('w:val'), '0')  # Set indentation level for the bullet
+    numId = OxmlElement('w:numId')  # Create list item
+    numId.set(qn('w:val'), '1')  # Set numbering ID to correspond to bullets
+
+    # Define bullet character (this can be adjusted to different bullet styles)
+    bulletChar = OxmlElement('w:bullet')
+    bulletChar.set(qn('w:val'), '•')  # Use the bullet character
+
+    # Append bullet properties to the numPr
+
+    numPr.append(ilvl)  # Add indentation to the numbering properties
+    numPr.append(numId)  # Add numbering ID to the properties
+    numPr.append(bulletChar)  # Add bullet character
+
+    # Append numPr to paragraph properties
+    pPr.append(numPr)  # Append the numbering properties to the paragraph properties
+
+
+def addScope(document, content):
+    header_paragraph = document.add_heading(level=0)
+    run = header_paragraph.add_run()
+    run.add_picture("icons/Maverick Logo.png", width=Inches(6))
+    document.add_paragraph()
+
+    # Iterate through the content to process lines
+    for line in content:
+        if '#' in line:
+            line = line.replace('#', '')
+            heading = document.add_heading(level=1)
+            run = heading.add_run(line)
+            run.bold = True
+            run.font.size = Pt(12)
+            heading.paragraph_format.line_spacing = 1.0
+        elif '*' in line:
+            line = line.replace('*', '')
+            para = document.add_paragraph(line)
+            para.paragraph_format.line_spacing = 1.0
+        else:
+            para = document.add_paragraph(line)
+            para.paragraph_format.line_spacing = 1.0
+            add_bullet(para)
+
+    # Add a blank paragraph and a page break at the end
+    document.add_paragraph()
+    scope_paragraph = document.add_paragraph("***Scope of work subject to be adjusted per client's request***")
+    scope_paragraph.paragraph_format.alignment = 1  # Center alignment
+    scope_paragraph.paragraph_format.line_spacing = 1.0
+    document.add_page_break()
+
 
 
 def set_cell_margins(cell, top, right, bottom, left):
@@ -29,38 +96,56 @@ def get_ordinal_suffix(day):
         return {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
 
 
-if 'services_list' not in st.session_state:
-    st.session_state.services_list = []
+def read_file(file_name):
+    lines = []
+    try:
+        with open(file_name, 'r') as file:
+            for line in file:
+                stripped_line = line.strip()
+                if stripped_line:
+                    lines.append(stripped_line)
+    except FileNotFoundError:
+        print(f"Error: The file '{file_name}' was not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    print(lines)
+    return lines
 
-st.title('Maverick :blue[Proposals] :page_facing_up:')
 
+# Call the function to initialize the session state
+initialize_session_state()
+
+
+st.image("icons/Maverick_Proposal.png", width=450)
 # File uploader for the proposal template
 st.header('Provide Proposal Template', divider="gray")
 doc_file = st.file_uploader("Upload Proposal Template (.docx)", type=["docx"])
 
-# Function to create a new service form
+# Sidebar for company details and service input
 with st.sidebar:
-    st.header('Maverick :blue[Proposals]', divider="gray")
+    st.logo("icons/Maverick Single - White.png",size="large")
     companyName = st.text_input("Company Name")
     ceoName = st.text_input("CEO Name")
     companyAddress = st.text_input("Company Address")
 
-    with st.form(key=f"services_intake_form_{len(st.session_state.services_list)}", clear_on_submit=False):
+    with st.form(key="Services"):
         serviceChoice = st.selectbox("Service", ["Concierge", "Security", "Janitorial", "Cleaning", "Porter", "Valet"])
         weeklyHours = st.number_input("Weekly Hours", min_value=0, max_value=1000, step=1, value=168)
         billRate = st.number_input("Bill Rate", min_value=0.0, max_value=1000.0, step=1.0, value=27.0)
         yearlyHolidayHours = st.number_input("Yearly Holiday Hours", min_value=0, max_value=1000, step=1)
         inflationRate = st.number_input("Inflation Rate", min_value=0.0, max_value=100.0, step=0.1, value=3.0)
+
         submitted = st.form_submit_button("Add Service")
         finalSubmit = st.form_submit_button("Generate Proposal")
 
     if submitted:
         new_service = Service.Service(serviceChoice, weeklyHours, billRate, yearlyHolidayHours, inflationRate)
         st.session_state.services_list.append(new_service)
-        st.rerun()
+        st.success(f"{serviceChoice} service added successfully!")
+        st.rerun()  # Rerun to refresh the state
 
     if finalSubmit:
-        # Validate inputs
+        # Validation
         if doc_file is None:
             st.warning("Please upload a proposal template.")
         elif not companyName or not ceoName or not companyAddress:
@@ -68,42 +153,28 @@ with st.sidebar:
         elif not st.session_state.services_list:
             st.warning("Please add at least one service before generating the proposal.")
         else:
-            # Create Document from the uploaded file
+
             document = Document(doc_file)
 
-            # Legend
             current_date = datetime.now()
-            formatted_date = current_date.strftime("%B") + f" {current_date.day}{get_ordinal_suffix(current_date.day)}, {current_date.year}"
+            formatted_date = current_date.strftime(
+                "%B") + f" {current_date.day}{get_ordinal_suffix(current_date.day)}, {current_date.year}"
 
-            for paragraph in document.paragraphs:
-                if 'CCNN' in paragraph.text:
-                    paragraph.text = paragraph.text.replace('CCNN', companyName)
-                if 'NNNN' in paragraph.text:
-                    paragraph.text = paragraph.text.replace('NNNN', ceoName)
-                if 'DDDD' in paragraph.text:
-                    paragraph.text = paragraph.text.replace('DDDD', formatted_date)
-                if 'CCAA' in paragraph.text:
-                    paragraph.text = paragraph.text.replace('CCAA', companyAddress)
-                if 'IIII' in paragraph.text:
-                    paragraph.text = paragraph.text.replace('IIII', str(inflationRate))
+            docxedit.replace_string(document, "CCNN", companyName)
+            docxedit.replace_string(document, "%CCAA%", str(companyAddress))
+            docxedit.replace_string(document, "NNNN", ceoName)
+            docxedit.replace_string(document, "DDDD", formatted_date)
 
-            for table in document.tables:
-                for row in table.rows:
-                    for cell in row.cells:
-                        if 'CCNN' in cell.text:
-                            # Clear the cell text
-                            cell.text = cell.text.replace('CCNN', '')  # Remove CCNN to add formatted text
+            # Scope of Work (Jan and Conc Only)
+            for service in st.session_state.services_list:
+                if service.serviceName == "Janitorial":
+                    content = read_file("ScopesOfWork/JANITORIAL.txt")
+                    addScope(document, content)
+                if service.serviceName == "Concierge":
+                    content = read_file("ScopesOfWork/CONCIERGE.txt")
+                    addScope(document, content)
 
-                            # Add the company name without adding a new line
-                            run_company_name = cell.add_paragraph().add_run(companyName)
-                            run_company_name.bold = True
-                            run_company_name.font.size = Pt(22)
-                            run_company_name.font.color.rgb = RGBColor(0, 0, 0)  # Set color
-
-                            run_proposal = cell.add_paragraph().add_run('Proposal')
-                            run_proposal.bold = True
-                            run_proposal.font.size = Pt(22)
-                            run_proposal.font.color.rgb = RGBColor(52, 118, 177)  # Set color
+            # Cost Proposal Table
 
             # Header
             document.add_paragraph()
@@ -122,7 +193,7 @@ with st.sidebar:
                              "Annual Amount (Year 3)"]
 
             for i, header in enumerate(table_headers):
-                hdr_cells[i].text = table_headers[i]
+                hdr_cells[i].text = header
                 hdr_cells[i].paragraphs[0].runs[0].font.bold = True
                 hdr_cells[i].paragraphs[0].runs[0].font.size = Inches(0.15)
                 hdr_cells[i].paragraphs[0].paragraph_format.alignment = 1
@@ -155,10 +226,12 @@ with st.sidebar:
             document.add_paragraph(
                 "***New Year’s Day, Presidents Day, Memorial Day, Independence Day, Labor Day, Thanksgiving Day, Christmas Day Is Included In the Above Pricing***")
 
+
             doc_io = BytesIO()
             document.save(doc_io)
             doc_io.seek(0)
 
+            # Download button for the proposal
             if st.session_state.services_list:
                 st.download_button(
                     label="Download Proposal",
