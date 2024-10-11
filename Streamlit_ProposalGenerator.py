@@ -58,14 +58,14 @@ def addScope(document, content):
             run = heading.add_run(line)
             run.bold = True
             run.font.size = Pt(12)
-            heading.paragraph_format.line_spacing = 1.0
+            heading.paragraph_format.line_spacing = 0.85
         elif '*' in line:
             line = line.replace('*', '')
             para = document.add_paragraph(line)
-            para.paragraph_format.line_spacing = 1.0
+            para.paragraph_format.line_spacing = 0.85
         else:
             para = document.add_paragraph(line)
-            para.paragraph_format.line_spacing = 1.0
+            para.paragraph_format.line_spacing = 0.85
             add_bullet(para)
 
     # Add a blank paragraph and a page break at the end
@@ -73,6 +73,7 @@ def addScope(document, content):
     scope_paragraph = document.add_paragraph("***Scope of work subject to be adjusted per client's request***")
     scope_paragraph.paragraph_format.alignment = 1  # Center alignment
     scope_paragraph.paragraph_format.line_spacing = 1.0
+
     document.add_page_break()
 
 
@@ -195,28 +196,32 @@ with st.sidebar:
 
             # Cost Proposal Table
 
-            # Header
+
             document.add_paragraph()
             heading = document.add_heading('COST PROPOSAL', level=1)
             run = heading.runs[0]
             run.bold = True
             run.font.size = Pt(22)
 
-            # Table
-            table = document.add_table(rows=1, cols=7)
+            table = document.add_table(rows=1, cols=8)
             table.style = 'Table Grid'
+
             # Table Headers
             hdr_cells = table.rows[0].cells
-            table_headers = ["Service", "Weekly Hours", "Bill Rate", "Monthly Amount",
-                             f"Annual Amount (Year 1)", "Annual Amount (Year 2)",
-                             "Annual Amount (Year 3)"]
+            table_headers = [
+                "Service", "Weekly Hours", "Bill Rate", "Inflation Rate", "Monthly Amount",
+                "Annual Amount (Year 1)", "Annual Amount (Year 2)", "Annual Amount (Year 3)"
+            ]
 
+            # Set headers
             for i, header in enumerate(table_headers):
                 hdr_cells[i].text = header
                 hdr_cells[i].paragraphs[0].runs[0].font.bold = True
-                hdr_cells[i].paragraphs[0].runs[0].font.size = Inches(0.15)
-                hdr_cells[i].paragraphs[0].paragraph_format.alignment = 1
-                set_cell_margins(hdr_cells[i], 55, 50, 45, 50)
+                hdr_cells[i].paragraphs[0].runs[0].font.size = Inches(0.15)  # Adjust as necessary
+                hdr_cells[i].paragraphs[0].paragraph_format.alignment = 1  # Center alignment
+                set_cell_margins(hdr_cells[i], 55, 50, 45, 50)  # Adjust margins
+
+                # Set background color
                 if i != 0:
                     hdr_cells[i]._element.get_or_add_tcPr().append(
                         parse_xml(r'<w:shd {} w:fill="ADD8E6"/>'.format(nsdecls('w'))))
@@ -230,21 +235,56 @@ with st.sidebar:
                 row_cells[0].text = service.serviceName
                 row_cells[1].text = str(service.weeklyHours)
                 row_cells[2].text = f"${service.billRate:.2f}"
-                row_cells[3].text = f"${service.monthlyAmount:.2f}"
-                row_cells[4].text = f"${service.annualAmountYear1:.2f}"
-                row_cells[5].text = f"${service.annualAmountYear2:.2f}"
-                row_cells[6].text = f"${service.annualAmountYear3:.2f}"
+                row_cells[3].text = f"{service.inflationRate * 100:.1f}%"
+                row_cells[4].text = f"${service.monthlyAmount:.2f}"
+                row_cells[5].text = f"${service.annualAmountYear1:.2f}"
+                row_cells[6].text = f"${service.annualAmountYear2:.2f}"
+                row_cells[7].text = f"${service.annualAmountYear3:.2f}"
 
+                # Set formatting for each cell in the row
                 for cell in row_cells:
-                    cell.paragraphs[0].paragraph_format.alignment = 1
-                    set_cell_margins(cell, 100, 100, 100, 100)
+                    cell.paragraphs[0].paragraph_format.alignment = 1  # Center alignment
+                    set_cell_margins(cell, 100, 100, 100, 100)  # Adjust margins
 
             # Footer
+
             document.add_paragraph()
             document.add_paragraph("***Applicable NJ Sales Tax Included***").paragraph_format.alignment = 1
             document.add_paragraph(
                 "***New Year’s Day, Presidents Day, Memorial Day, Independence Day, Labor Day, Thanksgiving Day, Christmas Day Is Included In the Above Pricing***")
+            # Final Page
+            document.add_page_break()
+            header_paragraph = document.add_heading(level=0)
+            run = header_paragraph.add_run()
+            run.add_picture("icons/Maverick Logo.png", width=Inches(6))
+            document.add_paragraph()
+            document.add_paragraph(formatted_date)
+            document.add_paragraph("To whom it may concern,")
+            document.add_paragraph("This Agreement will be for a one (1) year period. Any termination by either party or other changes are subject to written notice by either party not less than ninety (90) days prior to the end of the Contract Term.")
+            document.add_paragraph("Annual rates are subject to increase after each year, refer to the Cost Proposal table for more details.")
+            document.add_paragraph("Holiday differential is not included.")
+            document.add_paragraph("On behalf of our entire company staff, I would like to express our gratitude for your consideration in this RFP. We are committed to providing effective cooperation and assurance that we will work diligently towards a successful outcome. Thank you for the opportunity.")
+            document.add_paragraph()
+            document.add_paragraph("Sincerely,")
 
+            document.add_picture("icons/sign.png", width=Inches(1.5))
+            document.add_paragraph("Mark Morcos")
+            document.add_paragraph("Founder/President")
+            document.add_paragraph()
+            document.add_paragraph()
+            document.add_paragraph()
+            document.add_paragraph()
+            document.add_paragraph()
+            document.add_paragraph()
+            document.add_paragraph()
+            document.add_paragraph()
+            document.add_paragraph()
+            document.add_paragraph()
+            heading = document.add_heading('COMMITMENT TO PROJECT', level=1)
+            run = heading.runs[0]
+            run.bold = True
+            run.font.size = Pt(22)
+            document.add_paragraph("We guarantee the association that our team will remain with the project through the entire duration of the contract. Our team is committed to providing reliable, high-quality services, and we understand the importance of consistency and continuity for our clients. We will ensure that our team is fully staffed and that we have the necessary resources to deliver exceptional service throughout the entire contract period. If for any reason there are changes to the team, we will notify the association in advance and take steps to ensure a smooth transition of service")
 
             doc_io = BytesIO()
             document.save(doc_io)
