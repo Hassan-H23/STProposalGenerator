@@ -2,12 +2,11 @@ import math
 class Service:
     # Constructor
 
-    monthlyAmount = 0.0
-    annualAmountYear1 = 0.0
-    annualAmountYear2 = 0.0
-    annualAmountYear3 = 0.0
-    def __init__(self,serviceName, weeklyHours, billRate, yearlyHolidayHours,inflationRate):
-
+   # MonthlyAmount = 0.0
+    #AnnualAmountYear1 = 0.0
+    #AnnualAmountYear2 = 0.0
+    #AnnualAmountYear3 = 0.0
+    def __init__(self,serviceName, weeklyHours, billRate, yearlyHolidayHours,inflationRate,annualAmountYear1,annualAmountYear2,annualAmountYear3,monthlyAmount):
         self.serviceName = serviceName
         self.weeklyHours = weeklyHours
         self.billRate = billRate
