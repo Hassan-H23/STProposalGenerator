@@ -14,6 +14,8 @@ from docx import Document
 from docx.shared import Inches
 
 
+st.set_page_config(layout="wide",page_icon="icons/Maverick Single - White.png",page_title="Maverick Proposals")
+
 
 def initialize_session_state():
     if 'services_list' not in st.session_state:
@@ -68,7 +70,7 @@ def addScope(document, content):
             para.paragraph_format.line_spacing = 0.85
             add_bullet(para)
 
-    # Add a blank paragraph and a page break at the end
+
     document.add_paragraph()
     scope_paragraph = document.add_paragraph("***Scope of work subject to be adjusted per client's request***")
     scope_paragraph.paragraph_format.alignment = 1  # Center alignment
@@ -119,6 +121,7 @@ def populate_set(Set):
 
     # Convert the set to a list to maintain the order
     service_list = list(Set)
+    buildings = []
 
     # Check if there are more than one service to concatenate "and"
     if len(service_list) > 1:
@@ -137,15 +140,14 @@ if 'Service_Names_Set' not in st.session_state:
 
 st.image("icons/Maverick_Proposal.png", width=450)
 # File uploader for the proposal template
-st.header('Provide Proposal Template', divider="gray")
-doc_file = st.file_uploader("Upload Proposal Template (.docx)", type=["docx"])
+st.header('Service Table', divider="gray")
 
 # Sidebar for company details and service input
 with st.sidebar:
     st.logo("icons/Maverick Single - White.png",size="large")
-    companyName = st.text_input("Company Name")
-    ceoName = st.text_input("CEO Name")
-    companyAddress = st.text_input("Company Address")
+    companyName = st.text_input("Building Name")
+    ceoName = st.text_input("Attention To")
+    companyAddress = st.text_input("Building Address")
 
     with st.form(key="Services"):
         serviceChoice = st.selectbox("Service", ["Concierge", "Security", "Janitorial", "Cleaning", "Porter", "Valet"])
@@ -158,22 +160,21 @@ with st.sidebar:
         finalSubmit = st.form_submit_button("Generate Proposal")
 
     if submitted:
-        new_service = Service.Service(serviceChoice, weeklyHours, billRate, yearlyHolidayHours, inflationRate)
+        new_service = Service.Service(serviceChoice, weeklyHours, billRate, yearlyHolidayHours, inflationRate,0.0,0.0,0.0,0.0)
         st.session_state.services_list.append(new_service)
         st.success(f"{serviceChoice} service added successfully!")
-        st.rerun()  # Rerun to refresh the state
+        st.rerun()
 
     if finalSubmit:
         # Validation
-        if doc_file is None:
-            st.warning("Please upload a proposal template.")
-        elif not companyName or not ceoName or not companyAddress:
+
+        if not companyName or not ceoName or not companyAddress:
             st.warning("Please fill in all company details: Company Name, CEO Name, and Company Address.")
         elif not st.session_state.services_list:
             st.warning("Please add at least one service before generating the proposal.")
         else:
 
-            document = Document(doc_file)
+            document = Document("ScopesOfWork/Maverick Proposal Template .docx")
             ScopeOfWork = populate_set(st.session_state.Service_Names_Set)
             current_date = datetime.now()
             formatted_date = current_date.strftime(
@@ -203,13 +204,13 @@ with st.sidebar:
             run.bold = True
             run.font.size = Pt(22)
 
-            table = document.add_table(rows=1, cols=8)
+            table = document.add_table(rows=1, cols=9)
             table.style = 'Table Grid'
 
             # Table Headers
             hdr_cells = table.rows[0].cells
             table_headers = [
-                "Service", "Weekly Hours", "Bill Rate", "Inflation Rate", "Monthly Amount",
+                "Service", "Weekly Hours", "Bill Rate", "Inflation Rate", "Annual Holiday Hours" "Monthly Amount",
                 "Annual Amount (Year 1)", "Annual Amount (Year 2)", "Annual Amount (Year 3)"
             ]
 
@@ -234,12 +235,13 @@ with st.sidebar:
                 row_cells = table.add_row().cells
                 row_cells[0].text = service.serviceName
                 row_cells[1].text = str(service.weeklyHours)
-                row_cells[2].text = f"${service.billRate:.2f}"
-                row_cells[3].text = f"{service.inflationRate * 100:.1f}%"
-                row_cells[4].text = f"${service.monthlyAmount:.2f}"
-                row_cells[5].text = f"${service.annualAmountYear1:.2f}"
-                row_cells[6].text = f"${service.annualAmountYear2:.2f}"
-                row_cells[7].text = f"${service.annualAmountYear3:.2f}"
+                row_cells[2].text = f"${service.billRate:}"
+                row_cells[3].text = f"{service.inflationRate * 100}%"
+                row_cells[4].text = f"${service.yearlyHolidayHours }"
+                row_cells[5].text = f"${service.monthlyAmount}"
+                row_cells[6].text = f"${service.annualAmountYear1}"
+                row_cells[7].text = f"${service.annualAmountYear2}"
+                row_cells[8].text = f"${service.annualAmountYear3}"
 
                 # Set formatting for each cell in the row
                 for cell in row_cells:
@@ -300,57 +302,116 @@ with st.sidebar:
                 )
 
 # Convert the list of services to a DataFrame
+
 if st.session_state.services_list:
     services_df = pd.DataFrame([vars(service) for service in st.session_state.services_list])
-    st.dataframe(services_df)
 
-    # Allow user to remove or update services
-    st.header('Update or Remove Service :pencil:', divider="gray")
-    service_to_edit = st.selectbox("", options=[service.serviceName for service in st.session_state.services_list] + [
-        "None"])
+    # Create a mapping of old column names to new header names
+    header_mapping = {
+        'serviceName': 'Service Name',
+        'weeklyHours': 'Weekly Hours',
+        'billRate': 'Bill Rate',
+        'yearlyHolidayHours': 'Yearly Holiday Hours',
+        'inflationRate': 'Inflation Rate (%)',
+        'monthlyAmount': 'Monthly Amount',
+        'annualAmountYear1': 'Annual Amount Year 1',
+        'annualAmountYear2': 'Annual Amount Year 2',
+        'annualAmountYear3': 'Annual Amount Year 3'
+    }
 
+    # Rename the DataFrame columns
+    services_df.rename(columns=header_mapping, inplace=True)
+
+    # Format the values
+    services_df['Bill Rate'] = services_df['Bill Rate'].apply(lambda x: f"${x:.2f}")
+    services_df['Yearly Holiday Hours'] = services_df['Yearly Holiday Hours'].apply(lambda x: f"{x:.2f}")
+    services_df['Inflation Rate (%)'] = services_df['Inflation Rate (%)'].apply(lambda x: f"{int(x * 100)}%")  # Convert to whole number and add '%' sign
+    services_df['Monthly Amount'] = services_df['Monthly Amount'].apply(lambda x: f"${x:.2f}")
+    services_df['Annual Amount Year 1'] = services_df['Annual Amount Year 1'].apply(lambda x: f"${x:.2f}")
+    services_df['Annual Amount Year 2'] = services_df['Annual Amount Year 2'].apply(lambda x: f"${x:.2f}")
+    services_df['Annual Amount Year 3'] = services_df['Annual Amount Year 3'].apply(lambda x: f"${x:.2f}")
+
+    # Add ID column based on index
+    services_df.insert(0, 'ID', range(1, len(services_df) + 1))
+
+    # Convert the DataFrame to an HTML table with specific widths
+    html_table = services_df.to_html(classes='styled-table', index=False, escape=False)
+
+    # Center the table and style it
+    st.markdown(
+        """
+        <style>
+        .styled-table {
+            width: 100%;
+            max-width: 100%; /* Maximum width to fit any screen */
+            border-collapse: collapse;
+            table-layout: auto; /* Allow automatic column width */
+            margin: auto; /* Center the table */
+        }
+        .styled-table th, .styled-table td {
+            text-align: center; /* Center content in cells */
+            padding: 12px; /* Add padding for better spacing */
+            border: 0.5px solid #ddd; /* Add borders to cells */
+            overflow: hidden; /* Prevent overflow */
+            text-overflow: ellipsis; /* Ellipsis for overflowed text */
+            word-wrap: break-word; /* Break long words to fit */
+        }
+        .styled-table th {
+            background-color: #262730; /* Set header background color */
+            color: white; /* Set header text color to white */
+            font-weight: bold; /* Make header text bold */
+            font-size: 0.95em; /* Decrease font size for headers */
+        }
+        .styled-table td {
+            font-size: 0.9em; /* Decrease font size for data cells */
+        }
+        .styled-table td:first-child { /* Apply styles specifically for the ID column */
+            width: 30px; /* Set a fixed width for the ID column */
+        }
+        /* Responsive styling */
+        @media (max-width: 600px) {
+            .styled-table th, .styled-table td {
+                padding: 8px; /* Reduce padding on smaller screens */
+                font-size: 0.7em; /* Further adjust font size for smaller screens */
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Insert an additional <div> to wrap the HTML table for easier control over display
+    st.markdown(f"<div style='overflow-x:auto;'>{html_table}</div>", unsafe_allow_html=True)
+
+    # Add custom CSS for the selectbox
+    st.markdown(
+        """
+        <style>
+        .custom-select {
+            width: 150px; /* Set the desired width */
+            font-size: 0.8em; /* Decrease the font size */
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # Allow user to select a service
+    service_to_edit = st.selectbox(
+        "Select Service to Remove",
+        options=[f"{index + 1} - {service.serviceName}" for index, service in
+                 enumerate(st.session_state.services_list)] + ["None"],
+        key="service_select",
+        index=0,
+    )
     if service_to_edit != "None":
-        # Get selected service
-        selected_service = next(
-            service for service in st.session_state.services_list if service.serviceName == service_to_edit)
+        selected_service_index = int(service_to_edit.split(" - ")[0]) - 1  # Adjust index back to 0-based for selection
+        selected_service = st.session_state.services_list[selected_service_index]
 
-        with st.form(key='update_service_form'):
-            updated_service_choice = st.selectbox("Service",
-                                                  ["Concierge", "Security", "Janitorial", "Cleaning", "Porter",
-                                                   "Valet"],
-                                                  index=["Concierge", "Security", "Janitorial", "Cleaning", "Porter",
-                                                         "Valet"].index(selected_service.serviceName))
-            updated_weekly_hours = st.number_input("Weekly Hours", min_value=0, max_value=1000, step=1,
-                                                   value=selected_service.weeklyHours)
-            updated_bill_rate = st.number_input("Bill Rate", min_value=0.0, max_value=1000.0, step=1.0,
-                                                value=selected_service.billRate)
-            updated_yearly_holiday_hours = st.number_input("Yearly Holiday Hours", min_value=0, max_value=1000, step=1,
-                                                           value=selected_service.yearlyHolidayHours)
-            col1, col2, col3 = st.columns(3, vertical_alignment="bottom")
-            with col1:
-                update_button = st.form_submit_button("Update Service")
-            with col2:
-                remove_button = st.form_submit_button("Remove Service")
-            with col3:
-                clear_button = st.form_submit_button("Clear Services")
-
-        if update_button:
-            # Update the service with the new values
-            selected_service.serviceName = updated_service_choice
-            selected_service.weeklyHours = updated_weekly_hours
-            selected_service.billRate = updated_bill_rate
-            selected_service.yearlyHolidayHours = updated_yearly_holiday_hours
-            st.success("Service updated successfully!")
-            st.rerun()
-
-        if remove_button:
-            # Remove the service from the list
-            st.session_state.services_list.remove(selected_service)
+        if st.button("Remove Selected Service"):
+             # Remove the service from the list
+            st.session_state.services_list.pop(selected_service_index)
             st.success("Service removed successfully!")
-            st.rerun()
-
-        if clear_button:
-            st.session_state.services_list.clear()
             st.rerun()
 else:
     st.write("No services added")
