@@ -210,7 +210,7 @@ with st.sidebar:
             # Table Headers
             hdr_cells = table.rows[0].cells
             table_headers = [
-                "Service", "Weekly Hours", "Bill Rate", "Inflation Rate", "Annual Holiday Hours" "Monthly Amount",
+                "Service", "Weekly Hours", "Annual Holiday Hours", "Bill Rate", "Inflation Rate", "Monthly Amount",
                 "Annual Amount (Year 1)", "Annual Amount (Year 2)", "Annual Amount (Year 3)"
             ]
 
@@ -235,9 +235,9 @@ with st.sidebar:
                 row_cells = table.add_row().cells
                 row_cells[0].text = service.serviceName
                 row_cells[1].text = str(service.weeklyHours)
-                row_cells[2].text = f"${service.billRate:}"
-                row_cells[3].text = f"{service.inflationRate * 100}%"
-                row_cells[4].text = f"${service.yearlyHolidayHours }"
+                row_cells[2].text = f"{service.yearlyHolidayHours}"
+                row_cells[3].text = f"${service.billRate:}"
+                row_cells[4].text = f"{service.inflationRate * 100}%"
                 row_cells[5].text = f"${service.monthlyAmount}"
                 row_cells[6].text = f"${service.annualAmountYear1}"
                 row_cells[7].text = f"${service.annualAmountYear2}"
